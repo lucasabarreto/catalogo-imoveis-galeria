@@ -1,6 +1,5 @@
 import csv
 import xml.etree.ElementTree as ET
-from xml.dom import minidom
 import logging
 from typing import List
 from pathlib import Path
@@ -110,12 +109,10 @@ def generate_xml(properties: List[dict], output_path: str) -> int:
 
         count += 1
 
-    rough = ET.tostring(root, encoding="unicode", xml_declaration=False)
-    parsed = minidom.parseString(rough)
-    pretty = parsed.toprettyxml(indent="  ", encoding="utf-8")
-
+    ET.indent(root, space="  ")
+    tree = ET.ElementTree(root)
     with open(path, "wb") as f:
-        f.write(pretty)
+        tree.write(f, encoding="utf-8", xml_declaration=True)
 
     logger.info(f"XML gerado: {path} ({count} imóveis)")
     return count
