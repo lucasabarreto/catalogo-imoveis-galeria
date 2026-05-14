@@ -118,6 +118,137 @@ def generate_xml(properties: List[dict], output_path: str) -> int:
     return count
 
 
+GOOGLE_ADS_COLUMNS = [
+    "Listing ID", "Listing name", "Final URL", "Image URL", "City name",
+    "Description", "Price", "Property type", "Listing type",
+    "Contextual keywords", "Address", "Tracking template", "Custom parameter",
+    "Final mobile URL", "Android app link", "iOS app link", "iOS app store ID",
+    "Formatted price",
+]
+
+GOOGLE_PROPERTY_TYPE_MAP = {
+    "apartment": "apartment",
+    "house": "house",
+    "condo": "apartment",
+    "land": "land",
+    "commercial": "commercial",
+    "rural": "other",
+}
+
+
+def _google_property_type(raw: str) -> str:
+    return GOOGLE_PROPERTY_TYPE_MAP.get(raw, "other")
+
+
+def _google_description(prop: dict) -> str:
+    parts = []
+    pt = prop.get("property_type", "")
+    pt_labels = {
+        "apartment": "Apartamento",
+        "house": "Casa",
+        "commercial": "Comercial",
+        "land": "Terreno",
+        "condo": "Condomínio",
+        "rural": "Rural",
+    }
+    parts.append(pt_labels.get(pt, pt.capitalize()))
+    beds = prop.get("bedrooms", "")
+    if beds:
+        parts.append(f"{beds} quartos")
+    neighborhood = prop.get("neighborhood", "")
+    if neighborhood:
+        parts.append(neighborhood.title())
+    area = prop.get("area", "")
+    if area:
+        parts.append(f"{area}m²")
+    city = prop.get("city", "")
+    if city:
+        parts.append(city.title())
+    return " - ".join(parts)
+
+
+def _google_keywords(prop: dict) -> str:
+    kws = []
+    pt = prop.get("property_type", "")
+    pt_labels = {
+        "apartment": "apartamento",
+        "house": "casa",
+        "commercial": "comercial",
+        "land": "terreno",
+        "condo": "condomínio",
+        "rural": "rural",
+    }
+    if pt:
+        kws.append(pt_labels.get(pt, pt))
+    kws.append("locação")
+    beds = prop.get("bedrooms", "")
+    if beds:
+        kws.append(f"{beds} quartos")
+    neighborhood = prop.get("neighborhood", "")
+    if neighborhood:
+        kws.append(neighborhood.lower())
+    city = prop.get("city", "")
+    if city:
+        kws.append(city.lower())
+    return ";".join(kws)
+
+
+def _google_address(prop: dict) -> str:
+    parts = [
+        prop.get("neighborhood", ""),
+        prop.get("city", ""),
+        prop.get("state", ""),
+    ]
+    return ", ".join(p for p in parts if p)
+
+
+def _google_formatted_price(raw: str) -> str:
+    if not raw:
+        return ""
+    try:
+        value = float(raw.replace(" BRL", "").replace("BRL", "").strip())
+        formatted = f"{value:,.0f}".replace(",", ".")
+        return f"R$ {formatted}/mês"
+    except (ValueError, TypeError):
+        return ""
+
+
+def generate_google_ads_csv(properties: List[dict], output_path: str) -> int:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    count = 0
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=GOOGLE_ADS_COLUMNS)
+        writer.writeheader()
+        for prop in properties:
+            row = {
+                "Listing ID": str(prop.get("id", "")),
+                "Listing name": prop.get("title", ""),
+                "Final URL": prop.get("property_url", ""),
+                "Image URL": prop.get("image_link", ""),
+                "City name": prop.get("city", ""),
+                "Description": _google_description(prop),
+                "Price": prop.get("price", ""),
+                "Property type": _google_property_type(prop.get("property_type", "")),
+                "Listing type": "rent",
+                "Contextual keywords": _google_keywords(prop),
+                "Address": _google_address(prop),
+                "Tracking template": "",
+                "Custom parameter": "",
+                "Final mobile URL": "",
+                "Android app link": "",
+                "iOS app link": "",
+                "iOS app store ID": "",
+                "Formatted price": _google_formatted_price(prop.get("price", "")),
+            }
+            writer.writerow(row)
+            count += 1
+
+    logger.info(f"Google Ads CSV gerado: {path} ({count} imóveis)")
+    return count
+
+
 def save_partial(properties: List[dict], output_dir: str):
     if not properties:
         return

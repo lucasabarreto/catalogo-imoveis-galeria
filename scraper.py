@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from parser import parse_property_page
-from feed_generator import generate_csv, generate_xml, save_partial
+from feed_generator import generate_csv, generate_xml, generate_google_ads_csv, save_partial
 from diff_engine import rotate_snapshots, compare_and_report
 
 # ---------------------------------------------------------------------------
@@ -185,8 +185,11 @@ def main():
     csv_path = str(OUTPUT_DIR / "output.csv")
     xml_path = str(OUTPUT_DIR / "output.xml")
 
+    google_path = str(OUTPUT_DIR / "google_ads_real_estate_feed.csv")
+
     csv_count = generate_csv(properties, csv_path)
     xml_count = generate_xml(properties, xml_path)
+    google_count = generate_google_ads_csv(properties, google_path)
 
     # --- Cleanup partial ---
     partial_path = OUTPUT_DIR / "output_partial.csv"
@@ -207,7 +210,8 @@ Imóveis coletados:         {len(properties)}
 Imóveis ignorados/vazios:  {skipped}
 Erros:                     {errors}
 CSV gerado:                {csv_path} ({csv_count} registros)
-XML gerado:                {xml_path} ({xml_count} registros)
+XML Meta gerado:           {xml_path} ({xml_count} registros)
+Google Ads CSV gerado:     {google_path} ({google_count} registros)
 Tempo total:               {minutes}m {seconds}s
 
 COMPARAÇÃO COM EXECUÇÃO ANTERIOR:
