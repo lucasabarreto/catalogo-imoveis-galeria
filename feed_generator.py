@@ -13,11 +13,32 @@ CSV_COLUMNS = [
     "bedrooms", "bathrooms", "parking_spaces", "area", "link", "image_link",
 ]
 
-XML_FIELDS = [
-    "id", "title", "description", "price", "property_type", "listing_type",
-    "city", "neighborhood", "state", "bedrooms", "bathrooms", "parking_spaces",
-    "area", "image_link", "additional_images", "link",
-]
+META_PROPERTY_TYPE_MAP = {
+    "apartment": "apartment",
+    "house": "house",
+    "condo": "condo",
+    "land": "land",
+    "commercial": "other",
+    "rural": "other",
+}
+
+
+def _meta_property_type(raw: str) -> str:
+    return META_PROPERTY_TYPE_MAP.get(raw, "other")
+
+
+def _meta_price(raw: str) -> str:
+    if not raw:
+        return "0 BRL"
+    return raw
+
+
+def _meta_availability(listing_type: str) -> str:
+    if listing_type == "for_rent":
+        return "for_rent"
+    if listing_type == "for_sale":
+        return "for_sale"
+    return "for_rent"
 
 
 def generate_csv(properties: List[dict], output_path: str) -> int:
@@ -51,12 +72,42 @@ def generate_xml(properties: List[dict], output_path: str) -> int:
 
     for prop in properties:
         listing = ET.SubElement(root, "listing")
-        for field in XML_FIELDS:
-            el = ET.SubElement(listing, field)
-            if field == "link":
-                el.text = prop.get("property_url", "")
-            else:
-                el.text = str(prop.get(field, ""))
+
+        # --- Campos obrigatórios Meta Home Listings ---
+        ET.SubElement(listing, "home_listing_id").text = str(prop.get("id", ""))
+        ET.SubElement(listing, "name").text = prop.get("title", "")
+        ET.SubElement(listing, "availability").text = _meta_availability(prop.get("listing_type", ""))
+        ET.SubElement(listing, "description").text = prop.get("description", "")
+        ET.SubElement(listing, "price").text = _meta_price(prop.get("price", ""))
+        ET.SubElement(listing, "listing_type").text = "for_rent_by_agent"
+        ET.SubElement(listing, "property_type").text = _meta_property_type(prop.get("property_type", ""))
+        ET.SubElement(listing, "link").text = prop.get("property_url", "")
+
+        image = ET.SubElement(listing, "image")
+        ET.SubElement(image, "url").text = prop.get("image_link", "")
+
+        # --- Localização ---
+        ET.SubElement(listing, "address").text = prop.get("neighborhood", "")
+        ET.SubElement(listing, "city").text = prop.get("city", "")
+        ET.SubElement(listing, "region").text = prop.get("state", "")
+        ET.SubElement(listing, "country").text = "BR"
+        ET.SubElement(listing, "neighborhood").text = prop.get("neighborhood", "")
+
+        # --- Detalhes do imóvel ---
+        ET.SubElement(listing, "num_beds").text = str(prop.get("bedrooms", ""))
+        ET.SubElement(listing, "num_baths").text = str(prop.get("bathrooms", ""))
+        ET.SubElement(listing, "num_units").text = str(prop.get("parking_spaces", ""))
+        ET.SubElement(listing, "area_size").text = str(prop.get("area", ""))
+        ET.SubElement(listing, "area_unit").text = "sq_m" if prop.get("area") else ""
+
+        # --- Imagens adicionais ---
+        additional = prop.get("additional_images", "")
+        if additional:
+            imgs = [img.strip() for img in additional.split(",") if img.strip()]
+            for img_url in imgs[:20]:
+                ai = ET.SubElement(listing, "additional_image")
+                ET.SubElement(ai, "url").text = img_url
+
         count += 1
 
     rough = ET.tostring(root, encoding="unicode", xml_declaration=False)
