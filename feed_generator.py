@@ -72,20 +72,21 @@ def generate_xml(properties: List[dict], output_path: str) -> int:
     for prop in properties:
         listing = ET.SubElement(root, "listing")
 
-        # --- Campos obrigatórios Meta Home Listings ---
+        # --- Campos obrigatórios Meta (nomes planos) ---
+        ET.SubElement(listing, "id").text = str(prop.get("id", ""))
         ET.SubElement(listing, "home_listing_id").text = str(prop.get("id", ""))
+        ET.SubElement(listing, "title").text = prop.get("title", "")
         ET.SubElement(listing, "name").text = prop.get("title", "")
-        ET.SubElement(listing, "availability").text = _meta_availability(prop.get("listing_type", ""))
         ET.SubElement(listing, "description").text = prop.get("description", "")
+        ET.SubElement(listing, "availability").text = _meta_availability(prop.get("listing_type", ""))
+        ET.SubElement(listing, "condition").text = "used"
         ET.SubElement(listing, "price").text = _meta_price(prop.get("price", ""))
+        ET.SubElement(listing, "link").text = prop.get("property_url", "")
+        ET.SubElement(listing, "image_link").text = prop.get("image_link", "")
         ET.SubElement(listing, "listing_type").text = "for_rent_by_agent"
         ET.SubElement(listing, "property_type").text = _meta_property_type(prop.get("property_type", ""))
-        ET.SubElement(listing, "link").text = prop.get("property_url", "")
 
-        image = ET.SubElement(listing, "image")
-        ET.SubElement(image, "url").text = prop.get("image_link", "")
-
-        # --- Localização ---
+        # --- Localização (campos planos) ---
         ET.SubElement(listing, "address").text = prop.get("neighborhood", "")
         ET.SubElement(listing, "city").text = prop.get("city", "")
         ET.SubElement(listing, "region").text = prop.get("state", "")
@@ -99,13 +100,11 @@ def generate_xml(properties: List[dict], output_path: str) -> int:
         ET.SubElement(listing, "area_size").text = str(prop.get("area", ""))
         ET.SubElement(listing, "area_unit").text = "sq_m" if prop.get("area") else ""
 
-        # --- Imagens adicionais ---
+        # --- Imagens adicionais (planas, separadas por vírgula) ---
         additional = prop.get("additional_images", "")
         if additional:
             imgs = [img.strip() for img in additional.split(",") if img.strip()]
-            for img_url in imgs[:20]:
-                ai = ET.SubElement(listing, "additional_image")
-                ET.SubElement(ai, "url").text = img_url
+            ET.SubElement(listing, "additional_image_link").text = ",".join(imgs[:20])
 
         count += 1
 
